@@ -18,30 +18,95 @@ export default function Home() {
   const [nbPizzas, setNbPizzas] = React.useState<number>(0);
 
   useEffect(() => {
-      connectToHub();
-    }, []);
+    connectToHub();
+  }, []);
 
   function connectToHub() {
     let newHubConnection = new HubConnectionBuilder()
-    .withUrl('http://localhost:5282/hubs/pizza')
-    .build();
+      .withUrl('http://localhost:5282/hubs/pizza')
+      .build();
 
     // TODO: Mettre isConnected à true seulement une fois que la connection au Hub est faite
-    setIsConnected(true);
+
+    ////try {
+    //  newHubConnection.start();
+    //  setIsConnected(true);
+    //}
+    //catch (e) {
+    //  console.error('Erreur de connexion au Hub:', e)
+    //}
+
+    newHubConnection.on("UpdateNbUsers", (count: number) => {
+      setUserCount(count);
+    });
+
+    newHubConnection.on("UpdatePizzaPrice", (price: number) => {
+      setPizzaPrice(price);
+    });
+
+    newHubConnection.on("UpdateMoney", (currentMoney: number) => {
+      setMoney(currentMoney);
+    });
+
+    newHubConnection.on("UpdateNbPizzasAndMoney", (currentNbPizzas: number, currentMoney: number) => {
+      setNbPizzas(currentNbPizzas);
+      setMoney(currentMoney);
+    });
+
+    newHubConnection
+      .start()
+      .then(() => {
+        setIsConnected(true);
+      })
+      .catch((e) => {
+        console.error('Erreur de connexion au Hub:', e);
+      });
+
+    setHubConnection(newHubConnection);
   }
 
-  function selectChoice(selectedChoice:number) {
-    setSelectedChoice(selectedChoice);
+  function selectChoice(selectedChoice: number) {
+    if (hubConnection && isConnected) {
+      try {
+        hubConnection.invoke("SelectChoice", selectedChoice);
+        setSelectedChoice(selectedChoice);
+      } catch (e) {
+        console.error("Erreur lors de la sélection :", e);
+      }
+    }
   }
 
   function unselectChoice() {
-    setSelectedChoice(-1);
+    if (hubConnection && isConnected && selectedChoice >= 0) {
+      try {
+        hubConnection.invoke("UnselectChoice", selectedChoice);
+        setSelectedChoice(-1);
+      } catch (e) {
+        console.error("Erreur lors de la désélection :", e);
+      }
+    }
   }
 
   function addMoney() {
+    if (hubConnection && isConnected && selectedChoice >= 0) {
+      try {
+        hubConnection.invoke("AddMoney", selectedChoice);
+      }
+      catch (e) {
+        console.error("Erreur lors de l'ajout :", e);
+      }
+    }
   }
 
   function buyPizza() {
+    if (hubConnection && isConnected && selectedChoice >= 0) {
+      try {
+        hubConnection.invoke("BuyPizza", selectedChoice);
+      }
+      catch (e) {
+        console.error("Erreur lors de l'achat :", e);
+      }
+    }
   }
 
   return (
